@@ -32,7 +32,7 @@ fn main() -> io::Result<()> {
                 let throttle_time: i32 = 0;
 
                 // Write message_size
-                stream.write_all(&[0, 0, 0, 14])?;
+                stream.write_all(&[0, 0, 0, 18])?;
 
                 // Write header
                 stream.write_all(correlation_id)?;
@@ -45,6 +45,7 @@ fn main() -> io::Result<()> {
                 stream.write_all(&max_supported_version.to_be_bytes())?;
                 stream.write_all(&tag_buffer.to_be_bytes())?;
                 stream.write_all(&throttle_time.to_be_bytes())?;
+                stream.write_all(&tag_buffer.to_be_bytes())?;
             }
             Err(e) => {
                 println!("error: {}", e);
