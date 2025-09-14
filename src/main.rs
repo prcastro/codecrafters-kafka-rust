@@ -1,5 +1,5 @@
 #![allow(unused_imports)]
-use std::io::Write;
+use std::io::{Read, Write};
 use std::net::TcpListener;
 
 fn main() {
@@ -13,7 +13,17 @@ fn main() {
     for stream in listener.incoming() {
         match stream {
             Ok(mut _stream) => {
-                _stream.write_all(&[0, 0, 0, 5, 0, 0, 0, 7]).unwrap();
+                // Find correlation_id
+                let mut input: [u8; 12] = [0; 12];
+                let _input_size = _stream.read(&mut input).unwrap();
+                let correlation_id = &input[8..12];
+
+                // Write message_size
+                _stream.write_all(&[0, 0, 0, 4]).unwrap();
+
+                // Write correlation_id
+                _stream.write_all(correlation_id).unwrap();
+
                 println!("accepted new connection");
             }
             Err(e) => {
