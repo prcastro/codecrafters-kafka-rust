@@ -15,16 +15,20 @@ fn main() -> io::Result<()> {
             Ok(mut stream) => {
                 println!("accepted new connection");
 
-                // Find correlation_id
                 let mut input: [u8; 512] = [0; 512];
                 let _ = stream.read(&mut input)?;
+
+                // Parse data
+                let api_version = i16::from_be_bytes(input[6..8].try_into().unwrap());
                 let correlation_id = &input[8..12];
 
-                // Write message_size
-                stream.write_all(&[0, 0, 0, 4])?;
+                // Logic
+                let error_code: i16 = if api_version != 4 { 32 } else { 0 };
 
-                // Write correlation_id
+                // Write result
+                stream.write_all(&[0, 0, 0, 6])?;
                 stream.write_all(correlation_id)?;
+                stream.write_all(&error_code.to_be_bytes())?;
             }
             Err(e) => {
                 println!("error: {}", e);
