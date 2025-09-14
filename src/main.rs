@@ -38,7 +38,9 @@ fn main() -> io::Result<()> {
 
                 // Logic
                 let error_code: i16 = if api_version != 4 { 35 } else { 0 };
+                println!("error_code: {}", error_code);
                 let array_length: u8 = API_VERSIONS.len() as u8 + 1;
+                println!("array_length: {}", array_length);
                 let tag_buffer: u8 = 0;
                 let throttle_time: i32 = 0;
 
@@ -60,7 +62,8 @@ fn main() -> io::Result<()> {
                 body.extend_from_slice(&tag_buffer.to_be_bytes());
 
                 // Write to stream
-                let message_size: i32 = header.len() as i32 + body.len() as i32 + 1;
+                let message_size: i32 = header.len() as i32 + body.len() as i32;
+                println!("message_size: {}", message_size);
                 stream.write_all(&message_size.to_be_bytes())?;
                 stream.write_all(&header)?;
                 stream.write_all(&body)?;
