@@ -13,8 +13,10 @@ fn main() -> io::Result<()> {
     for stream in listener.incoming() {
         match stream {
             Ok(mut _stream) => {
+                println!("accepted new connection");
+
                 // Find correlation_id
-                let mut input: [u8; 12] = [0; 12];
+                let mut input: [u8; 512] = [0; 512];
                 let _input_size = _stream.read(&mut input)?;
                 let correlation_id = &input[8..12];
 
@@ -23,8 +25,6 @@ fn main() -> io::Result<()> {
 
                 // Write correlation_id
                 _stream.write_all(correlation_id)?;
-
-                println!("accepted new connection");
             }
             Err(e) => {
                 println!("error: {}", e);
