@@ -38,7 +38,7 @@ fn main() -> io::Result<()> {
 
                 // Logic
                 let error_code: i16 = if api_version != 4 { 35 } else { 0 };
-                let array_length: u8 = API_VERSIONS.len() as u8;
+                let array_length: u8 = API_VERSIONS.len() as u8 + 1;
                 let tag_buffer: u8 = 0;
                 let throttle_time: i32 = 0;
 
