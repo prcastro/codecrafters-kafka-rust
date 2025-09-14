@@ -23,7 +23,7 @@ fn main() -> io::Result<()> {
                 let correlation_id = &input[8..12];
 
                 // Logic
-                let error_code: i16 = if api_version != 4 { 32 } else { 0 };
+                let error_code: i16 = if api_version != 4 { 35 } else { 0 };
 
                 // Write result
                 stream.write_all(&[0, 0, 0, 6])?;
