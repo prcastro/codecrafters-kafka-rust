@@ -60,7 +60,7 @@ fn main() -> io::Result<()> {
                 body.extend_from_slice(&tag_buffer.to_be_bytes());
 
                 // Write to stream
-                let message_size: i32 = header.len() as i32 + body.len() as i32;
+                let message_size: i32 = header.len() as i32 + body.len() as i32 + 1;
                 stream.write_all(&message_size.to_be_bytes())?;
                 stream.write_all(&header)?;
                 stream.write_all(&body)?;
