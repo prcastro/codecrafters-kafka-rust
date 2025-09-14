@@ -32,7 +32,7 @@ fn main() -> io::Result<()> {
                 let throttle_time: i32 = 0;
 
                 // Write message_size
-                stream.write_all(&[0, 0, 0, 18])?;
+                stream.write_all(&[0, 0, 0, 19])?;
 
                 // Write header
                 stream.write_all(correlation_id)?;
