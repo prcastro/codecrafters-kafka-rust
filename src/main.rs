@@ -100,6 +100,7 @@ fn describe_topics(correlation_id: u32, topics: Vec<String>) -> DescribeTopicRes
 }
 
 fn handle_describe_topic(mut input: &[u8]) -> Vec<u8> {
+    // Deserialize input
     let _message_size = input.get_u32();
     let _api_key = input.get_u16();
     let _api_version = input.get_u16();
@@ -116,10 +117,7 @@ fn handle_describe_topic(mut input: &[u8]) -> Vec<u8> {
         topic_names.push(String::from_utf8_lossy(&topic_name_utf8).to_string());
     }
 
-    println!("Topic names: {:#?}", topic_names);
-
     let result = describe_topics(correlation_id, topic_names);
-    println!("Result: {:#?}", result);
 
     // Serialize result
     let mut header = vec![];
@@ -140,7 +138,6 @@ fn handle_describe_topic(mut input: &[u8]) -> Vec<u8> {
         body.put_u32(topic_description.authorized_operations);
         body.put_u8(0); // Tag buffer
     }
-
     body.put_u8(result.next_cursor);
     body.put_u8(0); // Tag buffer
 
