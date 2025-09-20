@@ -99,7 +99,8 @@ fn handle_describe_topic(input: &[u8]) -> Vec<u8> {
     let mut body = vec![];
     let throttle_time: u32 = 0;
     body.extend_from_slice(&throttle_time.to_be_bytes());
-    body.extend_from_slice(&(topic_array_length + 1).to_be_bytes());
+    body.push(topic_array_length + 1);
+
     for topic_idx in 0..topic_array_length {
         let error_code: i16 = 3;
         body.extend_from_slice(&error_code.to_be_bytes());
