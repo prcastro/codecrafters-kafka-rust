@@ -121,7 +121,7 @@ fn handle_describe_topic(input: &[u8]) -> Vec<u8> {
         let partition_length: u8 = 0;
         body.push(partition_length + 1);
 
-        let authorized_operations: i32 = 0;
+        let authorized_operations: u32 = 0;
         body.extend_from_slice(&authorized_operations.to_be_bytes());
 
         body.push(0); // Tag buffer
@@ -129,6 +129,7 @@ fn handle_describe_topic(input: &[u8]) -> Vec<u8> {
 
     let next_cursor: u8 = 0xff;
     body.push(next_cursor);
+
     body.push(0); // Tag buffer
 
     // Write result
