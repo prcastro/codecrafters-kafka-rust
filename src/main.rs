@@ -1,6 +1,6 @@
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
-use std::{default, thread};
+use std::thread;
 
 struct ApiKeyVerInfo {
     pub id: i16,
