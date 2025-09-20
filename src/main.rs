@@ -117,18 +117,18 @@ fn handle_describe_topic(input: &[u8]) -> Vec<u8> {
     let topic_array_length = input[idx] - 1;
     idx += 1;
 
-    let mut topics = vec![];
+    let mut topic_names = vec![];
     for _ in 0..topic_array_length {
         let topic_name_length = input[idx] as usize;
         idx += 1;
 
-        topics.push(String::from_utf8_lossy(&input[idx..idx + topic_name_length]).to_string());
+        topic_names.push(String::from_utf8_lossy(&input[idx..idx + topic_name_length]).to_string());
         idx += topic_name_length;
 
         idx += 1; // Tag buffer
     }
 
-    let result = describe_topics(correlation_id, topics);
+    let result = describe_topics(correlation_id, topic_names);
 
     // Header
     let mut header = vec![];
