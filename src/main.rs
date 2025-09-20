@@ -114,6 +114,7 @@ fn handle_describe_topic(mut input: &[u8]) -> Vec<u8> {
         let topic_name_utf8: Vec<u8> = (0..topic_name_length).map(|_| input.get_u8()).collect();
         topic_names.push(String::from_utf8_lossy(&topic_name_utf8).to_string());
     }
+
     println!("Topic names: {:#?}", topic_names);
 
     let result = describe_topics(correlation_id, topic_names);
