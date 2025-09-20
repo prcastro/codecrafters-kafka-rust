@@ -1,5 +1,4 @@
-#![allow(unused_imports)]
-use std::io::{self, Read, Write};
+use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::thread;
 
@@ -54,7 +53,7 @@ fn handle_connection(mut stream: TcpStream) {
                 body.extend_from_slice(&tag_buffer.to_be_bytes());
 
                 // Write to stream
-                let mut result = Vec::new();
+                let mut result = vec![];
                 let message_size: i32 = header.len() as i32 + body.len() as i32;
                 result.extend_from_slice(&message_size.to_be_bytes());
                 result.extend_from_slice(&header);
@@ -75,14 +74,9 @@ fn handle_connection(mut stream: TcpStream) {
     }
 }
 
-fn main() -> io::Result<()> {
-    // You can use print statements as follows for debugging, they'll be visible when running tests.
+fn main() {
     println!("Logs from your program will appear here!");
-
-    // Uncomment this block to pass the first stage
-    //
-    let listener = TcpListener::bind("127.0.0.1:9092")?;
-    //
+    let listener = TcpListener::bind("127.0.0.1:9092").unwrap();
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
@@ -96,6 +90,4 @@ fn main() -> io::Result<()> {
             }
         }
     }
-
-    Ok(())
 }
