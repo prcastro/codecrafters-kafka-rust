@@ -8,11 +8,20 @@ struct ApiKeyVerInfo {
     pub max: i16,
 }
 
-const API_VERSIONS: &[ApiKeyVerInfo] = &[ApiKeyVerInfo {
-    id: 18,
-    min: 0,
-    max: 4,
-}];
+const API_VERSIONS: &[ApiKeyVerInfo] = &[
+    // APIVersions
+    ApiKeyVerInfo {
+        id: 18,
+        min: 0,
+        max: 4,
+    },
+    // DescribeTopicPartitions
+    ApiKeyVerInfo {
+        id: 75,
+        min: 0,
+        max: 0,
+    },
+];
 
 fn handle_connection(mut stream: TcpStream) {
     let mut input: [u8; 512] = [0; 512];
