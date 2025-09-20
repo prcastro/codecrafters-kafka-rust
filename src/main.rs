@@ -101,7 +101,7 @@ fn handle_describe_topic(input: &[u8]) -> Vec<u8> {
     body.extend_from_slice(&throttle_time.to_be_bytes());
     body.extend_from_slice(&(topic_array_length + 1).to_be_bytes());
     for topic_idx in 1..topic_array_length {
-        let error_code: u16 = 3;
+        let error_code: i16 = 3;
         body.extend_from_slice(&error_code.to_be_bytes());
 
         let topic_name = &topics[topic_idx as usize];
@@ -121,7 +121,7 @@ fn handle_describe_topic(input: &[u8]) -> Vec<u8> {
         let partition_length: u8 = 0;
         body.push(partition_length + 1);
 
-        let authorized_operations: u32 = 0;
+        let authorized_operations: i32 = 0;
         body.extend_from_slice(&authorized_operations.to_be_bytes());
 
         body.push(0); // Tag buffer
