@@ -59,13 +59,51 @@ fn handle_api_version(input: &[u8]) -> Vec<u8> {
     return result;
 }
 
+#[derive(Debug)]
+struct TopicDescription {
+    pub name: String,
+    pub error_code: i16,
+    pub topic_id: [u8; 16],
+    pub is_internal: bool,
+    pub partition_length: u8,
+    pub authorized_operations: u32,
+}
+
+#[derive(Debug)]
+struct DescribeTopicResult {
+    pub correlation_id: u32,
+    pub throttle_time: u32,
+    pub topic_descriptions: Vec<TopicDescription>,
+    pub next_cursor: u8,
+}
+
+fn describe_topics(correlation_id: u32, topics: Vec<String>) -> DescribeTopicResult {
+    let mut topic_descriptions = vec![];
+    for topic_name in topics {
+        topic_descriptions.push(TopicDescription {
+            name: topic_name,
+            error_code: 3,
+            topic_id: [0; 16],
+            is_internal: false,
+            partition_length: 0,
+            authorized_operations: 0,
+        });
+    }
+    DescribeTopicResult {
+        correlation_id: correlation_id,
+        throttle_time: 0,
+        topic_descriptions: topic_descriptions,
+        next_cursor: 0xff,
+    }
+}
+
 fn handle_describe_topic(input: &[u8]) -> Vec<u8> {
     let mut idx = 6;
 
     let _api_version = i16::from_be_bytes(input[idx..idx + 2].try_into().unwrap());
     idx += 2;
 
-    let correlation_id = &input[idx..idx + 4];
+    let correlation_id = u32::from_be_bytes(input[idx..idx + 4].try_into().unwrap());
     idx += 4;
 
     let client_id_length = i16::from_be_bytes(input[idx..idx + 2].try_into().unwrap()) as usize;
@@ -90,47 +128,36 @@ fn handle_describe_topic(input: &[u8]) -> Vec<u8> {
         idx += 1; // Tag buffer
     }
 
+    let result = describe_topics(correlation_id, topics);
+
+    println!("Result: {:#?}", result);
+
     // Header
     let mut header = vec![];
-    header.extend_from_slice(correlation_id);
+    header.extend_from_slice(&result.correlation_id.to_be_bytes());
     header.push(0); // Tag buffer
 
     // Body
     let mut body = vec![];
-    let throttle_time: u32 = 0;
-    body.extend_from_slice(&throttle_time.to_be_bytes());
-    body.push(topic_array_length + 1);
+    body.extend_from_slice(&result.throttle_time.to_be_bytes());
+    body.push(result.topic_descriptions.len() as u8 + 1);
 
-    for topic_idx in 0..topic_array_length {
-        let error_code: i16 = 3;
-        body.extend_from_slice(&error_code.to_be_bytes());
+    for topic_description in result.topic_descriptions {
+        body.extend_from_slice(&topic_description.error_code.to_be_bytes());
 
-        let topic_name = &topics[topic_idx as usize];
-        let topic_name_utf8 = topic_name.as_bytes();
+        let topic_name_utf8 = topic_description.name.as_bytes();
         let topic_name_length = topic_name_utf8.len() as u8;
 
         body.push(topic_name_length);
         body.extend_from_slice(topic_name_utf8);
-
-        let topic_id: [u8; 16] = [0; 16];
-        body.extend_from_slice(&topic_id);
-
-        let is_internal: u8 = 0;
-        body.push(is_internal);
-
-        // TODO: Handle partitions here
-        let partition_length: u8 = 0;
-        body.push(partition_length + 1);
-
-        let authorized_operations: u32 = 0;
-        body.extend_from_slice(&authorized_operations.to_be_bytes());
-
+        body.extend_from_slice(&topic_description.topic_id);
+        body.push(topic_description.is_internal as u8);
+        body.push(topic_description.partition_length + 1);
+        body.extend_from_slice(&topic_description.authorized_operations.to_be_bytes());
         body.push(0); // Tag buffer
     }
 
-    let next_cursor: u8 = 0xff;
-    body.push(next_cursor);
-
+    body.push(result.next_cursor);
     body.push(0); // Tag buffer
 
     // Write result
