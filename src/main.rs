@@ -130,8 +130,6 @@ fn handle_describe_topic(input: &[u8]) -> Vec<u8> {
 
     let result = describe_topics(correlation_id, topics);
 
-    println!("Result: {:#?}", result);
-
     // Header
     let mut header = vec![];
     header.extend_from_slice(&result.correlation_id.to_be_bytes());
@@ -162,7 +160,7 @@ fn handle_describe_topic(input: &[u8]) -> Vec<u8> {
 
     // Write result
     let mut result = vec![];
-    let message_size: i32 = header.len() as i32 + body.len() as i32;
+    let message_size: u32 = header.len() as u32 + body.len() as u32;
     result.extend_from_slice(&message_size.to_be_bytes());
     result.extend_from_slice(&header);
     result.extend_from_slice(&body);
