@@ -80,7 +80,7 @@ fn handle_describe_topic(input: &[u8]) -> Vec<u8> {
     idx += 1;
 
     let mut topics = vec![];
-    for _ in 1..topic_array_length {
+    for _ in 0..topic_array_length {
         let topic_name_length = input[idx] as usize;
         idx += 1;
 
@@ -100,7 +100,7 @@ fn handle_describe_topic(input: &[u8]) -> Vec<u8> {
     let throttle_time: u32 = 0;
     body.extend_from_slice(&throttle_time.to_be_bytes());
     body.extend_from_slice(&(topic_array_length + 1).to_be_bytes());
-    for topic_idx in 1..topic_array_length {
+    for topic_idx in 0..topic_array_length {
         let error_code: i16 = 3;
         body.extend_from_slice(&error_code.to_be_bytes());
 
