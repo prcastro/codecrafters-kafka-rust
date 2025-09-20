@@ -159,6 +159,8 @@ fn handle_describe_topic(input: &[u8]) -> Vec<u8> {
 
     // Write response buffer
     let mut response = vec![];
+    println!("Header: {}", header.len());
+    println!("Body: {}", body.len());
     let message_size: u32 = header.len() as u32 + body.len() as u32;
     response.extend_from_slice(&message_size.to_be_bytes());
     response.extend_from_slice(&header);
