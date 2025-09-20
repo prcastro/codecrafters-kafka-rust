@@ -2,6 +2,8 @@ use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::thread;
 
+use bytes::{Buf, BufMut};
+
 struct ApiKeyVerInfo {
     pub id: i16,
     pub min: i16,
@@ -97,72 +99,51 @@ fn describe_topics(correlation_id: u32, topics: Vec<String>) -> DescribeTopicRes
     }
 }
 
-fn handle_describe_topic(input: &[u8]) -> Vec<u8> {
-    let mut idx = 6;
+fn handle_describe_topic(mut input: &[u8]) -> Vec<u8> {
+    let _message_size = input.get_u32();
+    let _api_key = input.get_u16();
+    let _api_version = input.get_u16();
+    let correlation_id = input.get_u32();
+    let client_id_length = input.get_u16() as usize;
+    let _client_id: Vec<u8> = (0..client_id_length).map(|_| input.get_u8()).collect();
+    let topic_array_length = input.get_u8() - 1;
 
-    let _api_version = i16::from_be_bytes(input[idx..idx + 2].try_into().unwrap());
-    idx += 2;
-
-    let correlation_id = u32::from_be_bytes(input[idx..idx + 4].try_into().unwrap());
-    idx += 4;
-
-    let client_id_length = i16::from_be_bytes(input[idx..idx + 2].try_into().unwrap()) as usize;
-    idx += 2;
-
-    let _client_id = &input[idx..idx + client_id_length];
-    idx += client_id_length;
-
-    idx += 1; // Tag buffer
-
-    let topic_array_length = input[idx] - 1;
-    idx += 1;
-
-    let mut topic_names = vec![];
+    let mut topic_names: Vec<String> = vec![];
     for _ in 0..topic_array_length {
-        let topic_name_length = input[idx] as usize;
-        idx += 1;
-
-        topic_names.push(String::from_utf8_lossy(&input[idx..idx + topic_name_length]).to_string());
-        idx += topic_name_length;
-
-        idx += 1; // Tag buffer
+        let topic_name_length = input.get_u8();
+        let topic_name_utf8: Vec<u8> = (0..topic_name_length).map(|_| input.get_u8()).collect();
+        topic_names.push(String::from_utf8_lossy(&topic_name_utf8).to_string());
     }
 
     let result = describe_topics(correlation_id, topic_names);
 
     // Serialize result
     let mut header = vec![];
-    header.extend_from_slice(&result.correlation_id.to_be_bytes());
-    header.push(0); // Tag buffer
+    header.put_u32(result.correlation_id);
+    header.put_u8(0); // Tag buffer
 
     let mut body = vec![];
-    body.extend_from_slice(&result.throttle_time.to_be_bytes());
-    body.push(result.topic_descriptions.len() as u8 + 1);
-
+    body.put_u32(result.throttle_time);
+    body.put_u8(result.topic_descriptions.len() as u8 + 1);
     for topic_description in result.topic_descriptions {
-        body.extend_from_slice(&topic_description.error_code.to_be_bytes());
-
+        body.put_i16(topic_description.error_code);
         let topic_name_utf8 = topic_description.name.as_bytes();
-        let topic_name_length = topic_name_utf8.len() as u8;
-
-        body.push(topic_name_length);
+        body.put_u8(topic_name_utf8.len() as u8);
         body.extend_from_slice(topic_name_utf8);
         body.extend_from_slice(&topic_description.topic_id);
-        body.push(topic_description.is_internal as u8);
-        body.push(topic_description.partition_length + 1);
-        body.extend_from_slice(&topic_description.authorized_operations.to_be_bytes());
-        body.push(0); // Tag buffer
+        body.put_u8(topic_description.is_internal as u8);
+        body.put_u8(topic_description.partition_length + 1);
+        body.put_u32(topic_description.authorized_operations);
+        body.put_u8(0); // Tag buffer
     }
 
-    body.push(result.next_cursor);
-    body.push(0); // Tag buffer
+    body.put_u8(result.next_cursor);
+    body.put_u8(0); // Tag buffer
 
     // Write response buffer
     let mut response = vec![];
-    println!("Header: {}", header.len());
-    println!("Body: {}", body.len());
     let message_size: u32 = header.len() as u32 + body.len() as u32;
-    response.extend_from_slice(&message_size.to_be_bytes());
+    response.put_u32(message_size);
     response.extend_from_slice(&header);
     response.extend_from_slice(&body);
     return response;
