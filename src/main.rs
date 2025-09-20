@@ -130,12 +130,11 @@ fn handle_describe_topic(input: &[u8]) -> Vec<u8> {
 
     let result = describe_topics(correlation_id, topic_names);
 
-    // Header
+    // Serialize result
     let mut header = vec![];
     header.extend_from_slice(&result.correlation_id.to_be_bytes());
     header.push(0); // Tag buffer
 
-    // Body
     let mut body = vec![];
     body.extend_from_slice(&result.throttle_time.to_be_bytes());
     body.push(result.topic_descriptions.len() as u8 + 1);
@@ -158,13 +157,13 @@ fn handle_describe_topic(input: &[u8]) -> Vec<u8> {
     body.push(result.next_cursor);
     body.push(0); // Tag buffer
 
-    // Write result
-    let mut result = vec![];
+    // Write response buffer
+    let mut response = vec![];
     let message_size: u32 = header.len() as u32 + body.len() as u32;
-    result.extend_from_slice(&message_size.to_be_bytes());
-    result.extend_from_slice(&header);
-    result.extend_from_slice(&body);
-    return result;
+    response.extend_from_slice(&message_size.to_be_bytes());
+    response.extend_from_slice(&header);
+    response.extend_from_slice(&body);
+    return response;
 }
 
 fn handle_connection(mut stream: TcpStream) {
