@@ -106,6 +106,7 @@ fn handle_describe_topic(mut input: &[u8]) -> Vec<u8> {
     let correlation_id = input.get_u32();
     let client_id_length = input.get_u16() as usize;
     let _client_id: Vec<u8> = (0..client_id_length).map(|_| input.get_u8()).collect();
+    input.get_u8(); // Tag Buffer
     let topic_array_length = input.get_u8() - 1;
 
     let mut topic_names: Vec<String> = vec![];
