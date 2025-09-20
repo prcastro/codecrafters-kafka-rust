@@ -1,6 +1,7 @@
 #![allow(unused_imports)]
 use std::io::{self, Read, Write};
 use std::net::{TcpListener, TcpStream};
+use std::thread;
 
 struct ApiKeyVerInfo {
     pub id: i16,
@@ -14,15 +15,13 @@ const API_VERSIONS: &[ApiKeyVerInfo] = &[ApiKeyVerInfo {
     max: 4,
 }];
 
-fn handle_connection(mut stream: TcpStream) -> Result<(), std::io::Error> {
+fn handle_connection(mut stream: TcpStream) {
     let mut input: [u8; 512] = [0; 512];
 
     loop {
         let result = stream.read(&mut input);
         match result {
-            Ok(0) => {
-                return Ok(());
-            }
+            Ok(0) => break,
             Ok(_) => {
                 let mut header = vec![];
                 let mut body = vec![];
@@ -55,13 +54,22 @@ fn handle_connection(mut stream: TcpStream) -> Result<(), std::io::Error> {
                 body.extend_from_slice(&tag_buffer.to_be_bytes());
 
                 // Write to stream
+                let mut result = Vec::new();
                 let message_size: i32 = header.len() as i32 + body.len() as i32;
-                stream.write_all(&message_size.to_be_bytes())?;
-                stream.write_all(&header)?;
-                stream.write_all(&body)?;
+                result.extend_from_slice(&message_size.to_be_bytes());
+                result.extend_from_slice(&header);
+                result.extend_from_slice(&body);
+
+                match stream.write_all(&result) {
+                    Err(e) => {
+                        println!("Error writing to stream: {}", e);
+                        break;
+                    }
+                    Ok(_) => {}
+                }
             }
             Err(e) => {
-                return Err(e);
+                println!("Error reading from connection: {}", e);
             }
         }
     }
@@ -79,7 +87,9 @@ fn main() -> io::Result<()> {
         match stream {
             Ok(stream) => {
                 println!("accepted new connection");
-                handle_connection(stream)?;
+                thread::spawn(|| {
+                    handle_connection(stream);
+                });
             }
             Err(e) => {
                 println!("error: {}", e);
