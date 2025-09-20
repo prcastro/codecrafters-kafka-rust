@@ -1,6 +1,6 @@
 #![allow(unused_imports)]
 use std::io::{self, Read, Write};
-use std::net::TcpListener;
+use std::net::{TcpListener, TcpStream};
 
 struct ApiKeyVerInfo {
     pub id: i16,
@@ -14,23 +14,18 @@ const API_VERSIONS: &[ApiKeyVerInfo] = &[ApiKeyVerInfo {
     max: 4,
 }];
 
-fn main() -> io::Result<()> {
-    // You can use print statements as follows for debugging, they'll be visible when running tests.
-    println!("Logs from your program will appear here!");
+fn handle_connection(mut stream: TcpStream) -> Result<(), std::io::Error> {
+    let mut input: [u8; 512] = [0; 512];
 
-    // Uncomment this block to pass the first stage
-    //
-    let listener = TcpListener::bind("127.0.0.1:9092")?;
-    //
-    for stream in listener.incoming() {
-        match stream {
-            Ok(mut stream) => {
-                println!("accepted new connection");
+    loop {
+        let result = stream.read(&mut input);
+        match result {
+            Ok(0) => {
+                return Ok(());
+            }
+            Ok(_) => {
                 let mut header = vec![];
                 let mut body = vec![];
-
-                let mut input: [u8; 512] = [0; 512];
-                let _ = stream.read(&mut input)?;
 
                 // Parse data
                 let api_version = i16::from_be_bytes(input[6..8].try_into().unwrap());
@@ -64,6 +59,27 @@ fn main() -> io::Result<()> {
                 stream.write_all(&message_size.to_be_bytes())?;
                 stream.write_all(&header)?;
                 stream.write_all(&body)?;
+            }
+            Err(e) => {
+                return Err(e);
+            }
+        }
+    }
+}
+
+fn main() -> io::Result<()> {
+    // You can use print statements as follows for debugging, they'll be visible when running tests.
+    println!("Logs from your program will appear here!");
+
+    // Uncomment this block to pass the first stage
+    //
+    let listener = TcpListener::bind("127.0.0.1:9092")?;
+    //
+    for stream in listener.incoming() {
+        match stream {
+            Ok(stream) => {
+                println!("accepted new connection");
+                handle_connection(stream)?;
             }
             Err(e) => {
                 println!("error: {}", e);
