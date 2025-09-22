@@ -112,7 +112,7 @@ fn handle_describe_topic(mut input: &[u8]) -> Vec<u8> {
 
     let mut topic_names: Vec<String> = vec![];
     for _ in 0..topic_array_length {
-        let topic_name_length = input.get_u8();
+        let topic_name_length = input.get_u8() - 1;
         let topic_name_utf8: Vec<u8> = (0..topic_name_length).map(|_| input.get_u8()).collect();
         topic_names.push(String::from_utf8_lossy(&topic_name_utf8).to_string());
     }
