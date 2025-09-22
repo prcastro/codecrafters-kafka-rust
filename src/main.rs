@@ -130,7 +130,7 @@ fn handle_describe_topic(mut input: &[u8]) -> Vec<u8> {
     for topic_description in result.topic_descriptions {
         body.put_i16(topic_description.error_code);
         let topic_name_utf8 = topic_description.name.as_bytes();
-        body.put_u8(topic_name_utf8.len() as u8);
+        body.put_u8(topic_name_utf8.len() as u8 + 1);
         body.extend_from_slice(topic_name_utf8);
         body.extend_from_slice(&topic_description.topic_id);
         body.put_u8(topic_description.is_internal as u8);
