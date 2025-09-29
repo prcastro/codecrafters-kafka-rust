@@ -451,6 +451,43 @@ fn partition_info_from_topic(
     partitions
 }
 
+fn hexdump(data: &[u8]) {
+    for (i, chunk) in data.chunks(16).enumerate() {
+        // Print offset
+        print!("{:08x}  ", i * 16);
+
+        // Print hex bytes
+        for (j, byte) in chunk.iter().enumerate() {
+            if j == 8 {
+                print!(" "); // Extra space in the middle
+            }
+            print!("{:02x} ", byte);
+        }
+
+        // Pad if less than 16 bytes
+        if chunk.len() < 16 {
+            for j in chunk.len()..16 {
+                if j == 8 {
+                    print!(" ");
+                }
+                print!("   ");
+            }
+        }
+
+        // Print ASCII representation
+        print!(" |");
+        for byte in chunk {
+            let c = if byte.is_ascii_graphic() || *byte == b' ' {
+                *byte as char
+            } else {
+                '.'
+            };
+            print!("{}", c);
+        }
+        println!("|");
+    }
+}
+
 // TODO:
 // 3. Find the Partition Records, extract the right partition information given a topic name
 // 4. Add topic_id and partition information to the TopicDescription struct
@@ -459,7 +496,10 @@ fn describe_topics(correlation_id: u32, topics: Vec<String>) -> DescribeTopicRes
 
     let customer_metadata_raw =
         fs::read("/tmp/kraft-combined-logs/__cluster_metadata-0/00000000000000000000.log").unwrap();
-    println!("Customer Metadata Raw: {:?}", customer_metadata_raw);
+    println!(
+        "Customer Metadata Raw:\n{:?}",
+        hexdump(&customer_metadata_raw)
+    );
 
     let cluster_metadata = ClusterMetadata::parse(&customer_metadata_raw);
     println!("Cluster Metadata: {:?}", cluster_metadata);
