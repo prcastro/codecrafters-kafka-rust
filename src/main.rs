@@ -61,6 +61,7 @@ fn handle_api_version(input: &[u8]) -> Vec<u8> {
     return result;
 }
 
+#[derive(Debug)]
 struct Partition {
     error_code: i16,
     partition_id: i32,
@@ -79,6 +80,7 @@ struct Partition {
     tag_buffer: u8,
 }
 
+#[derive(Debug)]
 struct TopicDescription {
     name: String,
     error_code: i16,
@@ -96,6 +98,7 @@ struct DescribeTopicResult {
     next_cursor: u8,
 }
 
+#[derive(Debug)]
 struct FeatureLevelRecord {
     _frame_version: u8,
     _record_type: u8,
@@ -129,6 +132,7 @@ impl FeatureLevelRecord {
     }
 }
 
+#[derive(Debug)]
 struct TopicRecord {
     _frame_version: u8,
     _record_type: u8,
@@ -164,6 +168,7 @@ impl TopicRecord {
     }
 }
 
+#[derive(Debug)]
 struct PartitionRecord {
     _frame_version: u8,
     _record_type: u8,
@@ -239,6 +244,7 @@ impl PartitionRecord {
     }
 }
 
+#[derive(Debug)]
 #[allow(dead_code)]
 enum RecordValue {
     FeatureLevel(FeatureLevelRecord),
@@ -269,6 +275,7 @@ impl RecordValue {
     }
 }
 
+#[derive(Debug)]
 struct Record {
     _length: i8,
     _attributes: u8,
@@ -281,6 +288,7 @@ struct Record {
     _header_array_count: u8,
 }
 
+#[derive(Debug)]
 struct RecordBatch {
     _base_offset: i64,
     _partition_leader_epoch: i32,
@@ -366,6 +374,7 @@ impl RecordBatch {
     }
 }
 
+#[derive(Debug)]
 struct ClusterMetadata {
     record_bacthes: Vec<RecordBatch>,
 }
@@ -445,9 +454,13 @@ fn partition_info_from_topic(
 // 3. Find the Partition Records, extract the right partition information given a topic name
 // 4. Add topic_id and partition information to the TopicDescription struct
 fn describe_topics(correlation_id: u32, topics: Vec<String>) -> DescribeTopicResult {
+    println!("Topics: {:?}", topics);
+
     let customer_metadata_raw =
         fs::read("/tmp/kraft-combined-logs/__cluster_metadata-0/00000000000000000000.log").unwrap();
     let cluster_metadata = ClusterMetadata::parse(&customer_metadata_raw);
+
+    println!("Cluster Metadata: {:?}", cluster_metadata);
 
     let mut topic_descriptions = vec![];
     for topic_name in topics {
@@ -479,6 +492,8 @@ fn describe_topics(correlation_id: u32, topics: Vec<String>) -> DescribeTopicRes
             authorized_operations: 0,
         });
     }
+
+    println!("Topic descriptions: {:?}", topic_descriptions);
 
     DescribeTopicResult {
         correlation_id: correlation_id,
