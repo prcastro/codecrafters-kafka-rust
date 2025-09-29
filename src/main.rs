@@ -1,6 +1,6 @@
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
-use std::thread;
+use std::{fs, thread};
 
 use bytes::{Buf, BufMut};
 
@@ -61,36 +61,421 @@ fn handle_api_version(input: &[u8]) -> Vec<u8> {
     return result;
 }
 
-#[derive(Debug)]
+struct Partition {
+    error_code: i16,
+    partition_id: i32,
+    leader_id: i32,
+    leader_epoch: i32,
+    replicas_length: u8,
+    replicas: Vec<i32>,
+    insync_replicas_length: u8,
+    insync_replicas: Vec<i32>,
+    eligible_leader_length: u8,
+    eligible_leader: Vec<i32>,
+    last_known_elr_length: u8,
+    last_known_elr: Vec<i32>,
+    offline_replica_length: u8,
+    offline_replica: Vec<i32>,
+    tag_buffer: u8,
+}
+
 struct TopicDescription {
-    pub name: String,
-    pub error_code: i16,
-    pub topic_id: [u8; 16],
-    pub is_internal: bool,
-    pub partition_length: u8,
-    pub authorized_operations: u32,
+    name: String,
+    error_code: i16,
+    topic_id: [u8; 16],
+    is_internal: bool,
+    partition_length: u8,
+    partition_info: Vec<Partition>,
+    authorized_operations: u32,
 }
 
-#[derive(Debug)]
 struct DescribeTopicResult {
-    pub correlation_id: u32,
-    pub throttle_time: u32,
-    pub topic_descriptions: Vec<TopicDescription>,
-    pub next_cursor: u8,
+    correlation_id: u32,
+    throttle_time: u32,
+    topic_descriptions: Vec<TopicDescription>,
+    next_cursor: u8,
 }
 
+struct FeatureLevelRecord {
+    _frame_version: u8,
+    _record_type: u8,
+    _version: u8,
+    _name_length: u8,
+    _name: String,
+    _feature_level: i16,
+    _tagged_field_length: u8,
+    _tagged_fields: Vec<u8>,
+}
+
+impl FeatureLevelRecord {
+    fn parse(cursor: &mut &[u8], frame_version: u8, record_type: u8) -> FeatureLevelRecord {
+        let version = cursor.get_u8();
+        let name_length = cursor.get_u8() - 1;
+        let name_raw: Vec<u8> = (0..name_length).map(|_| cursor.get_u8()).collect();
+        let name = String::from_utf8_lossy(&name_raw).to_string();
+        let feature_level = cursor.get_i16();
+        let tagged_field_length = cursor.get_u8();
+        let tagged_fields = (0..tagged_field_length).map(|_| cursor.get_u8()).collect();
+        FeatureLevelRecord {
+            _frame_version: frame_version,
+            _record_type: record_type,
+            _version: version,
+            _name_length: name_length,
+            _name: name,
+            _feature_level: feature_level,
+            _tagged_field_length: tagged_field_length,
+            _tagged_fields: tagged_fields,
+        }
+    }
+}
+
+struct TopicRecord {
+    _frame_version: u8,
+    _record_type: u8,
+    _version: u8,
+    _name_length: u8,
+    name: String,
+    topic_id: [u8; 16],
+    _tagged_field_length: u8,
+    _tagged_fields: Vec<u8>,
+}
+
+impl TopicRecord {
+    fn parse(cursor: &mut &[u8], frame_version: u8, record_type: u8) -> TopicRecord {
+        let version = cursor.get_u8();
+        let name_length = cursor.get_u8() - 1;
+        let name_raw: Vec<u8> = (0..name_length).map(|_| cursor.get_u8()).collect();
+        let name = String::from_utf8_lossy(&name_raw).to_string();
+        let topic_id: [u8; 16] = cursor[..16].try_into().unwrap();
+        cursor.advance(16);
+        let tagged_field_length = cursor.get_u8();
+        let tagged_fields = (0..tagged_field_length).map(|_| cursor.get_u8()).collect();
+
+        TopicRecord {
+            _frame_version: frame_version,
+            _record_type: record_type,
+            _version: version,
+            _name_length: name_length,
+            name,
+            topic_id,
+            _tagged_field_length: tagged_field_length,
+            _tagged_fields: tagged_fields,
+        }
+    }
+}
+
+struct PartitionRecord {
+    _frame_version: u8,
+    _record_type: u8,
+    _version: u8,
+    partition_id: i32,
+    topic_id: [u8; 16],
+    replicas_length: u8,
+    replicas: Vec<i32>,
+    insync_replicas_length: u8,
+    insync_replicas: Vec<i32>,
+    _removing_replicas_length: u8,
+    _removing_replicas: Vec<i32>,
+    _adding_replicas_length: u8,
+    _adding_replicas: Vec<i32>,
+    leader_id: i32,
+    leader_epoch: i32,
+    _partition_epoch: i32,
+    _directories_length: u8,
+    _directories: Vec<u32>,
+    _tagged_field_length: u8,
+    _tagged_fields: Vec<u8>,
+}
+impl PartitionRecord {
+    fn parse(cursor: &mut &[u8], frame_version: u8, record_type: u8) -> PartitionRecord {
+        let version = cursor.get_u8();
+        let partition_id = cursor.get_i32();
+        let topic_id = cursor[..16].try_into().unwrap();
+        cursor.advance(16);
+        let replicas_length = cursor.get_u8() - 1;
+        let replicas = (0..replicas_length).map(|_| cursor.get_i32()).collect();
+        let insync_replicas_length = cursor.get_u8() - 1;
+        let insync_replicas = (0..insync_replicas_length)
+            .map(|_| cursor.get_i32())
+            .collect();
+        let removing_replicas_length = cursor.get_u8() - 1;
+        let removing_replicas = (0..removing_replicas_length)
+            .map(|_| cursor.get_i32())
+            .collect();
+        let adding_replicas_length = cursor.get_u8() - 1;
+        let adding_replicas = (0..adding_replicas_length)
+            .map(|_| cursor.get_i32())
+            .collect();
+        let leader_id = cursor.get_i32();
+        let leader_epoch = cursor.get_i32();
+        let partition_epoch = cursor.get_i32();
+        let directories_length = cursor.get_u8() - 1;
+        let directories = (0..directories_length).map(|_| cursor.get_u32()).collect();
+        let tagged_field_length = cursor.get_u8();
+        let tagged_fields = (0..tagged_field_length).map(|_| cursor.get_u8()).collect();
+
+        PartitionRecord {
+            _frame_version: frame_version,
+            _record_type: record_type,
+            _version: version,
+            partition_id,
+            topic_id,
+            replicas_length,
+            replicas,
+            insync_replicas_length,
+            insync_replicas,
+            _removing_replicas_length: removing_replicas_length,
+            _removing_replicas: removing_replicas,
+            _adding_replicas_length: adding_replicas_length,
+            _adding_replicas: adding_replicas,
+            leader_id,
+            leader_epoch,
+            _partition_epoch: partition_epoch,
+            _directories_length: directories_length,
+            _directories: directories,
+            _tagged_field_length: tagged_field_length,
+            _tagged_fields: tagged_fields,
+        }
+    }
+}
+
+#[allow(dead_code)]
+enum RecordValue {
+    FeatureLevel(FeatureLevelRecord),
+    Topic(TopicRecord),
+    Partition(PartitionRecord),
+}
+
+impl RecordValue {
+    fn parse(record_raw: &[u8]) -> RecordValue {
+        let mut cursor = record_raw;
+        let frame_version = cursor.get_u8();
+        let record_type = cursor.get_u8();
+
+        match record_type {
+            0 => RecordValue::FeatureLevel(FeatureLevelRecord::parse(
+                &mut cursor,
+                frame_version,
+                record_type,
+            )),
+            1 => RecordValue::Topic(TopicRecord::parse(&mut cursor, frame_version, record_type)),
+            2 => RecordValue::Partition(PartitionRecord::parse(
+                &mut cursor,
+                frame_version,
+                record_type,
+            )),
+            _ => panic!("Unknown record type"),
+        }
+    }
+}
+
+struct Record {
+    _length: i8,
+    _attributes: u8,
+    _timestamp_delta: i8,
+    _offset_delta: i8,
+    _key_length: i8,
+    _key: Vec<u8>,
+    _value_length: i8,
+    value: RecordValue,
+    _header_array_count: u8,
+}
+
+struct RecordBatch {
+    _base_offset: i64,
+    _partition_leader_epoch: i32,
+    _magic_byte: u8,
+    _crc: i32,
+    _attributes: u16,
+    _last_offset_delta: i32,
+    _base_timestamp: i64,
+    _max_timestamp: i64,
+    _producer_id: i64,
+    _producer_epoch: i16,
+    _base_sequence: i32,
+    _num_records: u32,
+    records: Vec<Record>,
+}
+
+impl RecordBatch {
+    fn parse(input: &[u8]) -> (RecordBatch, &[u8]) {
+        let mut cursor = input;
+        let base_offset = cursor.get_i64();
+        let partition_leader_epoch = cursor.get_i32();
+        let magic_byte = cursor.get_u8();
+        let crc = cursor.get_i32();
+        let attributes = cursor.get_u16();
+        let last_offset_delta = cursor.get_i32();
+        let base_timestamp = cursor.get_i64();
+        let max_timestamp = cursor.get_i64();
+        let producer_id = cursor.get_i64();
+        let producer_epoch = cursor.get_i16();
+        let base_sequence = cursor.get_i32();
+        let num_records = cursor.get_u32();
+        let mut records = Vec::with_capacity(num_records as usize);
+
+        for _ in 0..num_records {
+            let length = cursor.get_i8();
+            let attributes = cursor.get_u8();
+            let timestamp_delta = cursor.get_i8();
+            let offset_delta = cursor.get_i8();
+            let key_length = cursor.get_i8();
+            let key = (0..key_length).map(|_| cursor.get_u8()).collect();
+            let value_length = cursor.get_i8();
+            let value_raw: Vec<u8> = (0..value_length).map(|_| cursor.get_u8()).collect();
+
+            let value: RecordValue = RecordValue::parse(&value_raw);
+
+            let header_array_count = cursor.get_u8();
+
+            let record = Record {
+                _length: length,
+                _attributes: attributes,
+                _timestamp_delta: timestamp_delta,
+                _offset_delta: offset_delta,
+                _key_length: key_length,
+                _key: key,
+                _value_length: value_length,
+                value: value,
+                _header_array_count: header_array_count,
+            };
+            records.push(record);
+        }
+
+        let record_batch = RecordBatch {
+            _base_offset: base_offset,
+            _partition_leader_epoch: partition_leader_epoch,
+            _magic_byte: magic_byte,
+            _crc: crc,
+            _attributes: attributes,
+            _last_offset_delta: last_offset_delta,
+            _base_timestamp: base_timestamp,
+            _max_timestamp: max_timestamp,
+            _producer_id: producer_id,
+            _producer_epoch: producer_epoch,
+            _base_sequence: base_sequence,
+            _num_records: num_records,
+            records: records,
+        };
+
+        return (record_batch, cursor);
+    }
+}
+
+struct ClusterMetadata {
+    record_bacthes: Vec<RecordBatch>,
+}
+
+impl ClusterMetadata {
+    fn parse(input: &[u8]) -> ClusterMetadata {
+        let mut cursor: &[u8] = &input;
+
+        let mut record_batches = vec![];
+        while cursor.len() != 0 {
+            let (record_batch, new_cursor) = RecordBatch::parse(cursor);
+            record_batches.push(record_batch);
+            cursor = new_cursor;
+        }
+
+        ClusterMetadata {
+            record_bacthes: record_batches,
+        }
+    }
+}
+
+fn topic_id_from_name(cluster_metadata: &ClusterMetadata, topic_name: &str) -> Option<[u8; 16]> {
+    for record_batch in &cluster_metadata.record_bacthes {
+        for record in &record_batch.records {
+            match &record.value {
+                RecordValue::Topic(topic_info) => {
+                    if topic_info.name == topic_name {
+                        return Some(topic_info.topic_id);
+                    }
+                }
+                _ => continue,
+            }
+        }
+    }
+    return None;
+}
+
+fn partition_info_from_topic(
+    cluster_metadata: &ClusterMetadata,
+    topic_id: [u8; 16],
+) -> Vec<Partition> {
+    let mut partitions = vec![];
+
+    for record_batch in &cluster_metadata.record_bacthes {
+        for record in &record_batch.records {
+            match &record.value {
+                RecordValue::Partition(partition_record) => {
+                    if partition_record.topic_id == topic_id {
+                        partitions.push(Partition {
+                            error_code: 0,
+                            partition_id: partition_record.partition_id,
+                            leader_id: partition_record.leader_id,
+                            leader_epoch: partition_record.leader_epoch,
+                            replicas_length: partition_record.replicas_length,
+                            replicas: partition_record.replicas.clone(),
+                            insync_replicas_length: partition_record.insync_replicas_length,
+                            insync_replicas: partition_record.insync_replicas.clone(),
+                            eligible_leader_length: 0,
+                            eligible_leader: vec![],
+                            last_known_elr_length: 0,
+                            last_known_elr: vec![],
+                            offline_replica_length: 0,
+                            offline_replica: vec![],
+                            tag_buffer: 0,
+                        });
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    partitions
+}
+
+// TODO:
+// 3. Find the Partition Records, extract the right partition information given a topic name
+// 4. Add topic_id and partition information to the TopicDescription struct
 fn describe_topics(correlation_id: u32, topics: Vec<String>) -> DescribeTopicResult {
+    let customer_metadata_raw =
+        fs::read("/tmp/kraft-combined-logs/__cluster_metadata-0/00000000000000000000.log").unwrap();
+    let cluster_metadata = ClusterMetadata::parse(&customer_metadata_raw);
+
     let mut topic_descriptions = vec![];
     for topic_name in topics {
+        let topic_id = match topic_id_from_name(&cluster_metadata, &topic_name) {
+            Some(id) => id,
+            None => {
+                topic_descriptions.push(TopicDescription {
+                    name: topic_name,
+                    error_code: 3,
+                    topic_id: [0; 16],
+                    is_internal: false,
+                    partition_length: 0,
+                    partition_info: vec![],
+                    authorized_operations: 0,
+                });
+                continue;
+            }
+        };
+
+        let partition_info = partition_info_from_topic(&cluster_metadata, topic_id);
+
         topic_descriptions.push(TopicDescription {
             name: topic_name,
-            error_code: 3,
-            topic_id: [0; 16],
+            error_code: 0,
+            topic_id: topic_id,
             is_internal: false,
-            partition_length: 0,
+            partition_length: partition_info.len() as u8,
+            partition_info: partition_info,
             authorized_operations: 0,
         });
     }
+
     DescribeTopicResult {
         correlation_id: correlation_id,
         throttle_time: 0,
@@ -135,6 +520,33 @@ fn handle_describe_topic(mut input: &[u8]) -> Vec<u8> {
         body.extend_from_slice(&topic_description.topic_id);
         body.put_u8(topic_description.is_internal as u8);
         body.put_u8(topic_description.partition_length + 1);
+        for partition in topic_description.partition_info {
+            body.put_i16(partition.error_code);
+            body.put_i32(partition.partition_id);
+            body.put_i32(partition.leader_id);
+            body.put_i32(partition.leader_epoch);
+            body.put_u8(partition.replicas_length + 1);
+            for replica in partition.replicas {
+                body.put_i32(replica);
+            }
+            body.put_u8(partition.insync_replicas_length + 1);
+            for replica in partition.insync_replicas {
+                body.put_i32(replica);
+            }
+            body.put_u8(partition.eligible_leader_length + 1);
+            for replica in partition.eligible_leader {
+                body.put_i32(replica);
+            }
+            body.put_u8(partition.last_known_elr_length + 1);
+            for replica in partition.last_known_elr {
+                body.put_i32(replica);
+            }
+            body.put_u8(partition.offline_replica_length + 1);
+            for replica in partition.offline_replica {
+                body.put_i32(replica);
+            }
+            body.put_u8(partition.tag_buffer);
+        }
         body.put_u32(topic_description.authorized_operations);
         body.put_u8(0); // Tag buffer
     }
