@@ -291,6 +291,7 @@ struct Record {
 #[derive(Debug)]
 struct RecordBatch {
     _base_offset: i64,
+    _batch_length: i32,
     _partition_leader_epoch: i32,
     _magic_byte: u8,
     _crc: i32,
@@ -301,7 +302,7 @@ struct RecordBatch {
     _producer_id: i64,
     _producer_epoch: i16,
     _base_sequence: i32,
-    _num_records: u32,
+    _records_length: u32,
     records: Vec<Record>,
 }
 
@@ -309,6 +310,7 @@ impl RecordBatch {
     fn parse(input: &[u8]) -> (RecordBatch, &[u8]) {
         let mut cursor = input;
         let base_offset = cursor.get_i64();
+        let batch_length = cursor.get_i32();
         let partition_leader_epoch = cursor.get_i32();
         let magic_byte = cursor.get_u8();
         let crc = cursor.get_i32();
@@ -319,10 +321,10 @@ impl RecordBatch {
         let producer_id = cursor.get_i64();
         let producer_epoch = cursor.get_i16();
         let base_sequence = cursor.get_i32();
-        let num_records = cursor.get_u32();
-        let mut records = Vec::with_capacity(num_records as usize);
+        let records_length = cursor.get_u32();
+        let mut records = Vec::with_capacity(records_length as usize);
 
-        for _ in 0..num_records {
+        for _ in 0..records_length {
             let length = cursor.get_i8();
             let attributes = cursor.get_u8();
             let timestamp_delta = cursor.get_i8();
@@ -356,6 +358,7 @@ impl RecordBatch {
 
         let record_batch = RecordBatch {
             _base_offset: base_offset,
+            _batch_length: batch_length,
             _partition_leader_epoch: partition_leader_epoch,
             _magic_byte: magic_byte,
             _crc: crc,
@@ -366,7 +369,7 @@ impl RecordBatch {
             _producer_id: producer_id,
             _producer_epoch: producer_epoch,
             _base_sequence: base_sequence,
-            _num_records: num_records,
+            _records_length: records_length,
             records: records,
         };
 
