@@ -324,8 +324,8 @@ impl RecordBatch {
         let records_length = cursor.get_u32();
 
         println!(
-            "Batch Length: {}\nPartition Leader Epoch: {}\nMagic Byte: {}\nCRC: {}\nAttributes: {}\nLast Offset Delta: {}\nBase Timestamp: {}\nMax Timestamp: {}\nProducer ID: {}\nProducer Epoch: {}\nBase Sequence: {}\nRecords Length: {}",
-            batch_length, partition_leader_epoch, magic_byte, crc, attributes, last_offset_delta, base_timestamp, max_timestamp, producer_id, producer_epoch, base_sequence, records_length
+            "Base offset: {}\nBatch Length: {}\nPartition Leader Epoch: {}\nMagic Byte: {}\nCRC: {}\nAttributes: {}\nLast Offset Delta: {}\nBase Timestamp: {}\nMax Timestamp: {}\nProducer ID: {}\nProducer Epoch: {}\nBase Sequence: {}\nRecords Length: {}",
+            base_offset, batch_length, partition_leader_epoch, magic_byte, crc, attributes, last_offset_delta, base_timestamp, max_timestamp, producer_id, producer_epoch, base_sequence, records_length
         );
 
         let mut records = Vec::with_capacity(records_length as usize);
@@ -359,6 +359,8 @@ impl RecordBatch {
                 value: value,
                 _header_array_count: header_array_count,
             };
+
+            println!("Record: {:?}", record);
             records.push(record);
         }
 
