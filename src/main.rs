@@ -336,17 +336,25 @@ impl RecordBatch {
             let timestamp_delta = cursor.get_i8();
             let offset_delta = cursor.get_i8();
             let key_length = cursor.get_i8();
+            println!("Length: {}", length);
+            println!("Attributes: {}", attributes);
+            println!("Timestamp Delta: {}", timestamp_delta);
+            println!("Offset Delta: {}", offset_delta);
+            println!("Key Length: {}", key_length);
             let key: Option<Vec<u8>> = if key_length >= 0 {
                 Some((0..key_length).map(|_| cursor.get_u8()).collect())
             } else {
                 None
             };
+            println!("Key: {:?}", key);
             let value_length = cursor.get_i8();
+            println!("Value Length: {}", value_length);
             let value_raw: Vec<u8> = (0..value_length).map(|_| cursor.get_u8()).collect();
-
+            println!("Value Raw: {:?}", value_raw);
             let value: RecordValue = RecordValue::parse(&value_raw);
-
+            println!("Value: {:?}", value);
             let header_array_count = cursor.get_u8();
+            println!("Header Array Count: {}", header_array_count);
 
             let record = Record {
                 _length: length,
