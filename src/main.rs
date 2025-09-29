@@ -275,7 +275,7 @@ struct Record {
     _timestamp_delta: i8,
     _offset_delta: i8,
     _key_length: i8,
-    _key: Vec<u8>,
+    _key: Option<Vec<u8>>,
     _value_length: i8,
     value: RecordValue,
     _header_array_count: u8,
@@ -320,7 +320,11 @@ impl RecordBatch {
             let timestamp_delta = cursor.get_i8();
             let offset_delta = cursor.get_i8();
             let key_length = cursor.get_i8();
-            let key = (0..key_length).map(|_| cursor.get_u8()).collect();
+            let key: Option<Vec<u8>> = if key_length >= 0 {
+                Some((0..key_length).map(|_| cursor.get_u8()).collect())
+            } else {
+                None
+            };
             let value_length = cursor.get_i8();
             let value_raw: Vec<u8> = (0..value_length).map(|_| cursor.get_u8()).collect();
 
