@@ -386,6 +386,7 @@ impl ClusterMetadata {
         let mut record_batches = vec![];
         while cursor.len() != 0 {
             let (record_batch, new_cursor) = RecordBatch::parse(cursor);
+            print!("Parsed record batch: {:?}", record_batch);
             record_batches.push(record_batch);
             cursor = new_cursor;
         }
