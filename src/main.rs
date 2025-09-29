@@ -322,6 +322,12 @@ impl RecordBatch {
         let producer_epoch = cursor.get_i16();
         let base_sequence = cursor.get_i32();
         let records_length = cursor.get_u32();
+
+        println!(
+            "Batch Length: {}\nPartition Leader Epoch: {}\nMagic Byte: {}\nCRC: {}\nAttributes: {}\nLast Offset Delta: {}\nBase Timestamp: {}\nMax Timestamp: {}\nProducer ID: {}\nProducer Epoch: {}\nBase Sequence: {}\nRecords Length: {}",
+            batch_length, partition_leader_epoch, magic_byte, crc, attributes, last_offset_delta, base_timestamp, max_timestamp, producer_id, producer_epoch, base_sequence, records_length
+        );
+
         let mut records = Vec::with_capacity(records_length as usize);
 
         for _ in 0..records_length {
@@ -499,7 +505,7 @@ fn describe_topics(correlation_id: u32, topics: Vec<String>) -> DescribeTopicRes
 
     let customer_metadata_raw =
         fs::read("/tmp/kraft-combined-logs/__cluster_metadata-0/00000000000000000000.log").unwrap();
-    println!("Customer Metadata Raw:",);
+    println!("Customer Metadata Raw:");
     hexdump(&customer_metadata_raw);
 
     let cluster_metadata = ClusterMetadata::parse(&customer_metadata_raw);
