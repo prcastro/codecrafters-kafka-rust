@@ -280,7 +280,7 @@ impl RecordValue {
 
 #[derive(Debug)]
 struct Record {
-    _length: i8,
+    _length: i64,
     _attributes: u8,
     _timestamp_delta: i8,
     _offset_delta: i8,
@@ -343,7 +343,7 @@ impl RecordBatch {
         let mut records = Vec::with_capacity(records_length as usize);
 
         for _ in 0..records_length {
-            let length = cursor.get_i8();
+            let length = cursor.get_signed_varint();
             let attributes = cursor.get_u8();
             let timestamp_delta = cursor.get_i8();
             let offset_delta = cursor.get_i8();
@@ -375,6 +375,8 @@ impl RecordBatch {
             println!("Value: {:?}", value);
 
             let header_array_count = cursor.get_u8();
+
+            println!("Header Array Count: {}", header_array_count);
 
             let record = Record {
                 _length: length,
@@ -427,6 +429,8 @@ impl ClusterMetadata {
             record_batches.push(record_batch);
             cursor = new_cursor;
         }
+
+        println!("Record Batches: {:?}", record_batches);
 
         ClusterMetadata {
             record_bacthes: record_batches,
