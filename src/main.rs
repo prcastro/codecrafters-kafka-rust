@@ -435,6 +435,7 @@ fn partition_info_from_topic(
         for record in &record_batch.records {
             match &record.value {
                 Some(RecordValue::Partition(partition_record)) => {
+                    println!("Partition Record: {:#?}", partition_record);
                     if partition_record.topic_id == topic_id {
                         partitions.push(Partition {
                             error_code: 0,
@@ -475,6 +476,7 @@ fn describe_topics(correlation_id: u32, topics: Vec<String>) -> DescribeTopicRes
 
     let mut topic_descriptions = vec![];
     for topic_name in topics {
+        println!("Topic Name: {}", topic_name);
         let topic_id = match topic_id_from_name(&cluster_metadata, &topic_name) {
             Some(id) => id,
             None => {
@@ -491,7 +493,11 @@ fn describe_topics(correlation_id: u32, topics: Vec<String>) -> DescribeTopicRes
             }
         };
 
+        println!("Topic ID: {:?}", topic_id);
+
         let partition_info = partition_info_from_topic(&cluster_metadata, topic_id);
+
+        println!("Partition Info: {:#?}", partition_info);
 
         topic_descriptions.push(TopicDescription {
             name: topic_name,
