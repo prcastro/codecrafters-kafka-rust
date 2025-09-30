@@ -359,6 +359,7 @@ impl RecordBatch {
             } else {
                 None
             };
+            println!("Value: {:?}", value);
             let header_array_count = cursor.get_u8();
             println!("Header Array Count: {}", header_array_count);
 
