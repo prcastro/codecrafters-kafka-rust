@@ -435,8 +435,8 @@ fn partition_info_from_topic(
         for record in &record_batch.records {
             match &record.value {
                 Some(RecordValue::Partition(partition_record)) => {
-                    println!("Partition Record: {:#?}", partition_record);
                     if partition_record.topic_id == topic_id {
+                        println!("Partition Record: {:#?}", partition_record);
                         partitions.push(Partition {
                             error_code: 0,
                             partition_id: partition_record.partition_id,
