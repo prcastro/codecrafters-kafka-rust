@@ -287,7 +287,7 @@ struct Record {
     _key_length: i64,
     _key: Option<Vec<u8>>,
     _value_length: i64,
-    value: RecordValue,
+    value: Option<RecordValue>,
     _header_array_count: u8,
 }
 
@@ -353,10 +353,12 @@ impl RecordBatch {
             // FIXME: This is a variable sized integer
             let value_length = cursor.get_signed_varint();
             println!("Value Length: {}", value_length);
-            let value_raw: Vec<u8> = (0..value_length).map(|_| cursor.get_u8()).collect();
-            println!("Value Raw: {:?}", value_raw);
-            let value: RecordValue = RecordValue::parse(&value_raw);
-            println!("Value: {:?}", value);
+            let value: Option<RecordValue> = if value_length >= 0 {
+                let value_raw: Vec<u8> = (0..value_length).map(|_| cursor.get_u8()).collect();
+                Some(RecordValue::parse(&value_raw))
+            } else {
+                None
+            };
             let header_array_count = cursor.get_u8();
             println!("Header Array Count: {}", header_array_count);
 
@@ -424,7 +426,7 @@ fn topic_id_from_name(cluster_metadata: &ClusterMetadata, topic_name: &str) -> O
     for record_batch in &cluster_metadata.record_bacthes {
         for record in &record_batch.records {
             match &record.value {
-                RecordValue::Topic(topic_info) => {
+                Some(RecordValue::Topic(topic_info)) => {
                     if topic_info.name == topic_name {
                         return Some(topic_info.topic_id);
                     }
@@ -445,7 +447,7 @@ fn partition_info_from_topic(
     for record_batch in &cluster_metadata.record_bacthes {
         for record in &record_batch.records {
             match &record.value {
-                RecordValue::Partition(partition_record) => {
+                Some(RecordValue::Partition(partition_record)) => {
                     if partition_record.topic_id == topic_id {
                         partitions.push(Partition {
                             error_code: 0,
