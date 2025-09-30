@@ -261,6 +261,9 @@ impl RecordValue {
         let frame_version = cursor.get_u8();
         let record_type = cursor.get_u8();
 
+        println!("Frame Version: {}", frame_version);
+        println!("Record Type: {}", record_type);
+
         match record_type {
             0 => RecordValue::FeatureLevel(FeatureLevelRecord::parse(
                 &mut cursor,
