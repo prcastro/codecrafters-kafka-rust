@@ -1,13 +1,11 @@
-// Export the Varint trait and its implementation for &[u8]
-
 use bytes::Buf;
 
 pub trait Varint {
-    fn get_signed_varint(self) -> i64;
+    fn get_signed_varint(&mut self) -> i64;
 }
 
 impl Varint for &[u8] {
-    fn get_signed_varint(mut self) -> i64 {
+    fn get_signed_varint(&mut self) -> i64 {
         let mut result = 0;
         let mut shift = 0;
         loop {
@@ -25,14 +23,16 @@ impl Varint for &[u8] {
 
 #[test]
 fn test_decode() {
-    let input: [u8; 2] = [0b1000_0010, 0b0000_0001];
+    let mut input: &[u8] = &[0b1000_0010, 0b0000_0001];
     let expected_output = 65;
     assert_eq!(expected_output, input.get_signed_varint());
+    assert!(input.is_empty());
 }
 
 #[test]
 fn test_decode_minus_one() {
-    let input: [u8; 1] = [0x01];
+    let mut input: &[u8] = &[0x01];
     let expected_output = -1;
     assert_eq!(expected_output, input.get_signed_varint());
+    assert!(input.is_empty());
 }
