@@ -470,6 +470,7 @@ fn describe_topics(correlation_id: u32, topics: Vec<String>) -> DescribeTopicRes
         fs::read("/tmp/kraft-combined-logs/__cluster_metadata-0/00000000000000000000.log").unwrap();
 
     let cluster_metadata = ClusterMetadata::parse(&customer_metadata_raw);
+    println!("Cluster Metadata: {:?}", cluster_metadata);
 
     let mut topic_descriptions = vec![];
     for topic_name in topics {
