@@ -265,13 +265,13 @@ impl RecordValue {
         println!("Record Type: {}", record_type);
 
         match record_type {
-            0 => RecordValue::FeatureLevel(FeatureLevelRecord::parse(
+            12 => RecordValue::FeatureLevel(FeatureLevelRecord::parse(
                 &mut cursor,
                 frame_version,
                 record_type,
             )),
-            1 => RecordValue::Topic(TopicRecord::parse(&mut cursor, frame_version, record_type)),
-            2 => RecordValue::Partition(PartitionRecord::parse(
+            2 => RecordValue::Topic(TopicRecord::parse(&mut cursor, frame_version, record_type)),
+            3 => RecordValue::Partition(PartitionRecord::parse(
                 &mut cursor,
                 frame_version,
                 record_type,
