@@ -533,11 +533,21 @@ fn handle_describe_topic(mut input: &[u8]) -> Vec<u8> {
     input.get_u8(); // Tag Buffer
     let topic_array_length = input.get_u8() - 1;
 
+    println!("Message size: {}", _message_size);
+    println!("API Key: {}", _api_key);
+    println!("API Version: {}", _api_version);
+    println!("Correlation ID: {}", correlation_id);
+    println!("Client ID Length: {}", client_id_length);
+    println!("Topic Array Length: {}", topic_array_length);
+
     let mut topic_names: Vec<String> = vec![];
     for _ in 0..topic_array_length {
         let topic_name_length = input.get_u8() - 1;
+        println!("Topic Name Length: {}", topic_name_length);
         let topic_name_utf8: Vec<u8> = (0..topic_name_length).map(|_| input.get_u8()).collect();
-        topic_names.push(String::from_utf8_lossy(&topic_name_utf8).to_string());
+        let topic_name = String::from_utf8_lossy(&topic_name_utf8).to_string();
+        println!("Topic Name: {}", topic_name);
+        topic_names.push(topic_name);
     }
 
     let result = describe_topics(correlation_id, topic_names);
