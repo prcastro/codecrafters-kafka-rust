@@ -1,8 +1,11 @@
+mod varint;
+
+use varint::Varint;
+
+use bytes::{Buf, BufMut};
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::{fs, thread};
-
-use bytes::{Buf, BufMut};
 
 struct ApiKeyVerInfo {
     pub id: i16,
@@ -281,9 +284,9 @@ struct Record {
     _attributes: u8,
     _timestamp_delta: i8,
     _offset_delta: i8,
-    _key_length: i8,
+    _key_length: i64,
     _key: Option<Vec<u8>>,
-    _value_length: i8,
+    _value_length: i64,
     value: RecordValue,
     _header_array_count: u8,
 }
@@ -335,7 +338,7 @@ impl RecordBatch {
             let attributes = cursor.get_u8();
             let timestamp_delta = cursor.get_i8();
             let offset_delta = cursor.get_i8();
-            let key_length = cursor.get_i8();
+            let key_length = cursor.get_signed_varint();
             println!("Length: {}", length);
             println!("Attributes: {}", attributes);
             println!("Timestamp Delta: {}", timestamp_delta);
@@ -347,7 +350,8 @@ impl RecordBatch {
                 None
             };
             println!("Key: {:?}", key);
-            let value_length = cursor.get_i8();
+            // FIXME: This is a variable sized integer
+            let value_length = cursor.get_signed_varint();
             println!("Value Length: {}", value_length);
             let value_raw: Vec<u8> = (0..value_length).map(|_| cursor.get_u8()).collect();
             println!("Value Raw: {:?}", value_raw);
