@@ -326,6 +326,20 @@ impl RecordBatch {
         let base_sequence = cursor.get_i32();
         let records_length = cursor.get_u32();
 
+        println!("Base Offset: {}", base_offset);
+        println!("Batch Length: {}", batch_length);
+        println!("Partition Leader Epoch: {}", partition_leader_epoch);
+        println!("Magic Byte: {}", magic_byte);
+        println!("CRC: {}", crc);
+        println!("Attributes: {}", attributes);
+        println!("Last Offset Delta: {}", last_offset_delta);
+        println!("Base Timestamp: {}", base_timestamp);
+        println!("Max Timestamp: {}", max_timestamp);
+        println!("Producer ID: {}", producer_id);
+        println!("Producer Epoch: {}", producer_epoch);
+        println!("Base Sequence: {}", base_sequence);
+        println!("Records Length: {}", records_length);
+
         let mut records = Vec::with_capacity(records_length as usize);
 
         for _ in 0..records_length {
@@ -334,12 +348,20 @@ impl RecordBatch {
             let timestamp_delta = cursor.get_i8();
             let offset_delta = cursor.get_i8();
 
+            println!("Length: {}", length);
+            println!("Attributes: {}", attributes);
+            println!("Timestamp Delta: {}", timestamp_delta);
+            println!("Offset Delta: {}", offset_delta);
+
             let key_length = cursor.get_signed_varint();
             let key: Option<Vec<u8>> = if key_length >= 0 {
                 Some((0..key_length).map(|_| cursor.get_u8()).collect())
             } else {
                 None
             };
+
+            println!("Key Length: {}", key_length);
+            println!("Key: {:?}", key);
 
             let value_length = cursor.get_signed_varint();
             let value: Option<RecordValue> = if value_length >= 0 {
@@ -348,6 +370,10 @@ impl RecordBatch {
             } else {
                 None
             };
+
+            println!("Value Length: {}", value_length);
+            println!("Value: {:?}", value);
+
             let header_array_count = cursor.get_u8();
 
             let record = Record {
