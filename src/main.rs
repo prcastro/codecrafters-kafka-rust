@@ -414,9 +414,7 @@ fn topic_id_from_name(cluster_metadata: &ClusterMetadata, topic_name: &str) -> O
         for record in &record_batch.records {
             match &record.value {
                 Some(RecordValue::Topic(topic_info)) => {
-                    println!("Topic Info: {:#?}", topic_info);
                     if topic_info.name == topic_name {
-                        println!("Topic ID: {:#?}", topic_info.topic_id);
                         return Some(topic_info.topic_id);
                     }
                 }
@@ -438,7 +436,6 @@ fn partition_info_from_topic(
             match &record.value {
                 Some(RecordValue::Partition(partition_record)) => {
                     if partition_record.topic_id == topic_id {
-                        println!("Partition Record: {:#?}", partition_record);
                         partitions.push(Partition {
                             error_code: 0,
                             partition_id: partition_record.partition_id,
@@ -470,17 +467,13 @@ fn partition_info_from_topic(
 // 3. Find the Partition Records, extract the right partition information given a topic name
 // 4. Add topic_id and partition information to the TopicDescription struct
 fn describe_topics(correlation_id: u32, topics: Vec<String>) -> DescribeTopicResult {
-    println!("Describe Topics");
-    println!("Topics: {:?}", topics);
     let customer_metadata_raw =
         fs::read("/tmp/kraft-combined-logs/__cluster_metadata-0/00000000000000000000.log").unwrap();
 
     let cluster_metadata = ClusterMetadata::parse(&customer_metadata_raw);
-    println!("Cluster Metadata: {:#?}", cluster_metadata);
 
     let mut topic_descriptions = vec![];
     for topic_name in topics {
-        println!("Topic Name: {}", topic_name);
         let topic_id = match topic_id_from_name(&cluster_metadata, &topic_name) {
             Some(id) => id,
             None => {
@@ -497,12 +490,7 @@ fn describe_topics(correlation_id: u32, topics: Vec<String>) -> DescribeTopicRes
             }
         };
 
-        println!("Topic ID: {:?}", topic_id);
-
         let partition_info = partition_info_from_topic(&cluster_metadata, topic_id);
-
-        println!("Partition Info: {:#?}", partition_info);
-
         topic_descriptions.push(TopicDescription {
             name: topic_name,
             error_code: 0,
@@ -533,20 +521,11 @@ fn handle_describe_topic(mut input: &[u8]) -> Vec<u8> {
     input.get_u8(); // Tag Buffer
     let topic_array_length = input.get_u8() - 1;
 
-    println!("Message size: {}", _message_size);
-    println!("API Key: {}", _api_key);
-    println!("API Version: {}", _api_version);
-    println!("Correlation ID: {}", correlation_id);
-    println!("Client ID Length: {}", client_id_length);
-    println!("Topic Array Length: {}", topic_array_length);
-
     let mut topic_names: Vec<String> = vec![];
     for _ in 0..topic_array_length {
         let topic_name_length = input.get_u8() - 1;
-        println!("Topic Name Length: {}", topic_name_length);
         let topic_name_utf8: Vec<u8> = (0..topic_name_length).map(|_| input.get_u8()).collect();
         let topic_name = String::from_utf8_lossy(&topic_name_utf8).to_string();
-        println!("Topic Name: {}", topic_name);
         topic_names.push(topic_name);
         input.get_u8(); // Tag Buffer
     }
