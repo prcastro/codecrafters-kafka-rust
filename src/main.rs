@@ -261,9 +261,6 @@ impl RecordValue {
         let frame_version = cursor.get_u8();
         let record_type = cursor.get_u8();
 
-        println!("Frame Version: {}", frame_version);
-        println!("Record Type: {}", record_type);
-
         match record_type {
             12 => RecordValue::FeatureLevel(FeatureLevelRecord::parse(
                 &mut cursor,
@@ -329,11 +326,6 @@ impl RecordBatch {
         let base_sequence = cursor.get_i32();
         let records_length = cursor.get_u32();
 
-        println!(
-            "Base offset: {}\nBatch Length: {}\nPartition Leader Epoch: {}\nMagic Byte: {}\nCRC: {}\nAttributes: {}\nLast Offset Delta: {}\nBase Timestamp: {}\nMax Timestamp: {}\nProducer ID: {}\nProducer Epoch: {}\nBase Sequence: {}\nRecords Length: {}",
-            base_offset, batch_length, partition_leader_epoch, magic_byte, crc, attributes, last_offset_delta, base_timestamp, max_timestamp, producer_id, producer_epoch, base_sequence, records_length
-        );
-
         let mut records = Vec::with_capacity(records_length as usize);
 
         for _ in 0..records_length {
@@ -341,30 +333,22 @@ impl RecordBatch {
             let attributes = cursor.get_u8();
             let timestamp_delta = cursor.get_i8();
             let offset_delta = cursor.get_i8();
+
             let key_length = cursor.get_signed_varint();
-            println!("Length: {}", length);
-            println!("Attributes: {}", attributes);
-            println!("Timestamp Delta: {}", timestamp_delta);
-            println!("Offset Delta: {}", offset_delta);
-            println!("Key Length: {}", key_length);
             let key: Option<Vec<u8>> = if key_length >= 0 {
                 Some((0..key_length).map(|_| cursor.get_u8()).collect())
             } else {
                 None
             };
-            println!("Key: {:?}", key);
-            // FIXME: This is a variable sized integer
+
             let value_length = cursor.get_signed_varint();
-            println!("Value Length: {}", value_length);
             let value: Option<RecordValue> = if value_length >= 0 {
                 let value_raw: Vec<u8> = (0..value_length).map(|_| cursor.get_u8()).collect();
                 Some(RecordValue::parse(&value_raw))
             } else {
                 None
             };
-            println!("Value: {:?}", value);
             let header_array_count = cursor.get_u8();
-            println!("Header Array Count: {}", header_array_count);
 
             let record = Record {
                 _length: length,
@@ -378,7 +362,6 @@ impl RecordBatch {
                 _header_array_count: header_array_count,
             };
 
-            println!("Record: {:?}", record);
             records.push(record);
         }
 
@@ -415,7 +398,6 @@ impl ClusterMetadata {
         let mut record_batches = vec![];
         while cursor.len() != 0 {
             let (record_batch, new_cursor) = RecordBatch::parse(cursor);
-            print!("Parsed record batch: {:?}", record_batch);
             record_batches.push(record_batch);
             cursor = new_cursor;
         }
@@ -480,56 +462,14 @@ fn partition_info_from_topic(
     partitions
 }
 
-fn hexdump(data: &[u8]) {
-    for (i, chunk) in data.chunks(16).enumerate() {
-        // Print offset
-        print!("{:08x}  ", i * 16);
-
-        // Print hex bytes
-        for (j, byte) in chunk.iter().enumerate() {
-            if j == 8 {
-                print!(" "); // Extra space in the middle
-            }
-            print!("{:02x} ", byte);
-        }
-
-        // Pad if less than 16 bytes
-        if chunk.len() < 16 {
-            for j in chunk.len()..16 {
-                if j == 8 {
-                    print!(" ");
-                }
-                print!("   ");
-            }
-        }
-
-        // Print ASCII representation
-        print!(" |");
-        for byte in chunk {
-            let c = if byte.is_ascii_graphic() || *byte == b' ' {
-                *byte as char
-            } else {
-                '.'
-            };
-            print!("{}", c);
-        }
-        println!("|");
-    }
-}
-
 // TODO:
 // 3. Find the Partition Records, extract the right partition information given a topic name
 // 4. Add topic_id and partition information to the TopicDescription struct
 fn describe_topics(correlation_id: u32, topics: Vec<String>) -> DescribeTopicResult {
-    println!("Topics: {:?}", topics);
-
     let customer_metadata_raw =
         fs::read("/tmp/kraft-combined-logs/__cluster_metadata-0/00000000000000000000.log").unwrap();
-    println!("Customer Metadata Raw:");
-    hexdump(&customer_metadata_raw);
 
     let cluster_metadata = ClusterMetadata::parse(&customer_metadata_raw);
-    println!("Cluster Metadata: {:?}", cluster_metadata);
 
     let mut topic_descriptions = vec![];
     for topic_name in topics {
@@ -561,8 +501,6 @@ fn describe_topics(correlation_id: u32, topics: Vec<String>) -> DescribeTopicRes
             authorized_operations: 0,
         });
     }
-
-    println!("Topic descriptions: {:?}", topic_descriptions);
 
     DescribeTopicResult {
         correlation_id: correlation_id,
@@ -691,13 +629,13 @@ fn main() {
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
-                println!("accepted new connection");
+                println!("Accepted new connection");
                 thread::spawn(|| {
                     handle_connection(stream);
                 });
             }
             Err(e) => {
-                println!("error: {}", e);
+                println!("Error: {}", e);
             }
         }
     }
