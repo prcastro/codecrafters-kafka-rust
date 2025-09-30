@@ -467,13 +467,15 @@ fn partition_info_from_topic(
 // 3. Find the Partition Records, extract the right partition information given a topic name
 // 4. Add topic_id and partition information to the TopicDescription struct
 fn describe_topics(correlation_id: u32, topics: Vec<String>) -> DescribeTopicResult {
+    let mut sorted_topics = topics.clone();
+    sorted_topics.sort();
     let customer_metadata_raw =
         fs::read("/tmp/kraft-combined-logs/__cluster_metadata-0/00000000000000000000.log").unwrap();
 
     let cluster_metadata = ClusterMetadata::parse(&customer_metadata_raw);
 
     let mut topic_descriptions = vec![];
-    for topic_name in topics {
+    for topic_name in sorted_topics {
         let topic_id = match topic_id_from_name(&cluster_metadata, &topic_name) {
             Some(id) => id,
             None => {
