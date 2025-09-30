@@ -416,6 +416,7 @@ fn topic_id_from_name(cluster_metadata: &ClusterMetadata, topic_name: &str) -> O
                 Some(RecordValue::Topic(topic_info)) => {
                     println!("Topic Info: {:#?}", topic_info);
                     if topic_info.name == topic_name {
+                        println!("Topic ID: {:#?}", topic_info.topic_id);
                         return Some(topic_info.topic_id);
                     }
                 }
