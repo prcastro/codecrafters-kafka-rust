@@ -71,7 +71,7 @@ impl TopicRecord {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PartitionRecord {
     _frame_version: u8,
     _record_type: u8,
@@ -306,5 +306,40 @@ impl ClusterMetadata {
         ClusterMetadata {
             record_bacthes: record_batches,
         }
+    }
+
+    pub fn topic_id(&self, topic_name: &str) -> Option<[u8; 16]> {
+        for record_batch in &self.record_bacthes {
+            for record in &record_batch.records {
+                match &record.value {
+                    Some(RecordValue::Topic(topic_info)) => {
+                        if topic_info.name == topic_name {
+                            return Some(topic_info.topic_id);
+                        }
+                    }
+                    _ => continue,
+                }
+            }
+        }
+        return None;
+    }
+
+    pub fn partitions(&self, topic_id: [u8; 16]) -> Vec<PartitionRecord> {
+        let mut partitions = vec![];
+
+        for record_batch in &self.record_bacthes {
+            for record in &record_batch.records {
+                match &record.value {
+                    Some(RecordValue::Partition(partition_record)) => {
+                        if partition_record.topic_id == topic_id {
+                            partitions.push(partition_record.clone());
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        partitions
     }
 }
